@@ -1,14 +1,16 @@
+import logging
 import os
+import time
+import urllib.request
+from itertools import islice
+from typing import Dict, List
+
+import cv2
+import numpy as np
 import tensorflow.compat.v2 as tf
 import tensorflow_hub as hub
-import cv2
-import urllib.request
-import numpy as np
-import time
-import logging
+
 from constants import DEFAULT_IMAGE_URLS, DEFAULT_LABELS_URL, DEFAULT_MODEL_URL
-from itertools import islice
-from typing import List, Dict
 
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"  # Disable Tensorflow logging
 
@@ -52,24 +54,24 @@ class BirdClassifier:
     ):
         for index, image_url in enumerate(image_urls):
 
-            # Loading images
+            logging.info("Loading images")
             image_get_response = urllib.request.urlopen(image_url)
             image_array = np.asarray(
                 bytearray(image_get_response.read()), dtype=np.uint8
             )
-            # Changing images
+            logging.info("Changing images")
             image = cv2.imdecode(image_array, cv2.IMREAD_COLOR)
             image = cv2.resize(image, (224, 224))
             image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
             image = image / 255
-            # Generate tensor
+            logging.info("Generate tensor")
             image_tensor = tf.convert_to_tensor(image, dtype=tf.float32)
             image_tensor = tf.expand_dims(image_tensor, 0)
             model_raw_output = self.model.call(image_tensor).numpy()
             birds_names_with_results_ordered = self.order_birds_by_result_score(
                 model_raw_output, self.labels
             )
-            # Print results to kubernetes log
+            logging.info("Print results to kubernetes log")
             print("Run: %s" % int(index + 1))
             bird_name, bird_score = self.get_top_n_result(
                 1, birds_names_with_results_ordered

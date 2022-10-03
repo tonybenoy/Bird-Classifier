@@ -18,7 +18,9 @@ mypy = "^0.981"
 black = "^22.8.0"
 flake8 = "^5.0.4"
 pylint = "^2.15.3"
-isort = "pre-commit"
+pre-commit = "^2.20.0"
+isort = "^5.10.1"
+
 
 [build-system]
 requires = ["poetry-core"]
