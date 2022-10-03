@@ -1,0 +1,57 @@
+version: "3"
+services:
+  fastapi:
+    build:
+      context: .
+      dockerfile: ./Dockerfile
+    image: localhost:5000/tony/fastapi-python-test
+    network_mode: host
+    volumes:
+      - type: bind
+        source: ./
+        target: /src
+    command: "gunicorn -b localhost:${PORT} webapp:app -w ${WORKERS} -k uvicorn.workers.UvicornWorker --preload --log-level {LOGLEVEL}"
+  db:
+    image: postgres
+    volumes:
+      - ./data/db:/var/lib/postgresql/data
+    network_mode: host
+    environment:
+      - POSTGRES_DB=python-test
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+  redis:
+    image: redis:latest
+    container_name: redis_local
+    ports:
+      - target: 6379
+        published: 6379
+    deploy:
+      mode: replicated
+      replicas: 1
+      placement:
+        constraints:
+          - node.role == manager
+  rqworker-default:
+    image: localhost:5000/tony/fastapi-python-test
+    stop_signal: SIGTERM
+    network_mode: host
+    volumes:
+      - type: bind
+        source: ./
+        target: /src
+    deploy:
+      mode: replicated
+      replicas: 6
+      placement:
+        constraints:
+          - node.role == manager
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+      update_config:
+        order: stop-first
+
+    working_dir: /src
+    command: rq worker default

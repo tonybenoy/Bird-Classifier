@@ -27,3 +27,21 @@ repos:
       hooks:
           - id: isort
             args: ["--profile", "black"]
+    - repo: local
+      hooks:
+        - id: pylint
+          name: pylint
+          entry: pylint
+          language: system
+          types: [python]
+          args:
+            [
+              "-rn",
+              "-sn",
+              "--generated-members=cv2.",
+              "--ignored-modules=tensorflow.compat.v2",
+              "--disable=R,C",
+              "--ignore-paths=alembic",
+
+              "--init-hook=import sys; sys.path.append('.')"
+            ]

@@ -56,9 +56,9 @@ class BirdClassifier:
         logging.info("Loading image")
         try:
             image_get_response = urllib.request.urlopen(image_url)
-        except ValueError as e:
-            logging.error(f"HTTP Error:{str(e)}")
-            logging.error(f"Image URL: {image_url}")
+        except ValueError as error:
+            logging.error("HTTP Error:%s", str(error))
+            logging.error("Image URL: %s", image_url)
             return []
         image_array = np.asarray(bytearray(image_get_response.read()), dtype=np.uint8)
         logging.info("Changing image")
@@ -77,20 +77,42 @@ class BirdClassifier:
 
     def show_results(self, birds_names_with_results_ordered: List, index: int):
         # Print results to kubernetes log
-        print("Run: %s" % int(index + 1))
+        print(f"Run: {int(index + 1)}")
         bird_name, bird_score = self.get_top_n_result(
             1, birds_names_with_results_ordered
         )
-        print('Top match: "%s" with score: %s' % (bird_name, bird_score))
+        print(f"Top match: : {bird_name} with score:{bird_score}")
         bird_name, bird_score = self.get_top_n_result(
             2, birds_names_with_results_ordered
         )
-        print('Second match: "%s" with score: %s' % (bird_name, bird_score))
+        print(f"Second match: {bird_name} with score:{bird_score}")
         bird_name, bird_score = self.get_top_n_result(
             3, birds_names_with_results_ordered
         )
-        print('Third match: "%s" with score: %s' % (bird_name, bird_score))
+        print(f"Third match: {bird_name} with score:{bird_score}")
         print("\n")
+
+    def show_json_response(self, birds_names_with_results_ordered: List):
+        result = {}
+        bird_name, bird_score = self.get_top_n_result(
+            1, birds_names_with_results_ordered
+        )
+        result["top_match"] = {"bird_name": bird_name, "bird_score": float(bird_score)}
+        bird_name, bird_score = self.get_top_n_result(
+            2, birds_names_with_results_ordered
+        )
+        result["second_match"] = {
+            "bird_name": bird_name,
+            "bird_score": float(bird_score),
+        }
+        bird_name, bird_score = self.get_top_n_result(
+            3, birds_names_with_results_ordered
+        )
+        result["third_match"] = {
+            "bird_name": bird_name,
+            "bird_score": float(bird_score),
+        }
+        return result
 
 
 def main(url: str, index: int):
@@ -116,30 +138,34 @@ def app(
     if spawn:
         if workers > len(urls):
             workers = len(urls)
-            logging.info(
-                f"Number of workers reduced to {workers} as there \
-                are only {len(urls)} images.",
+            logging.warning(
+                "Number of workers reduced to %s as there \
+                are only %s images.",
+                workers,
+                len(urls),
             )
         elif workers < 1:
             workers = 1
-            logging.info(
-                f"Number of workers reduced to {workers} as minimum worker is one."
+            logging.warning(
+                "Number of workers reduced to %s as minimum worker is one.", workers
             )
         elif workers > cpu_count():
-            workers = cpu_count()
-            logging.info(
-                f"Number of workers reduced to {workers} as \
-                there are only {cpu_count()} CPUs."
+            workers = cpu_count() // 2
+            logging.warning(
+                "Number of workers reduced to %s as \
+                there are only %s CPUs.",
+                workers,
+                cpu_count(),
             )
-        pool = Pool(workers)
-        logging.info("CPU count: %s" % cpu_count())
-        for index, url in enumerate(urls):
-            pool.apply_async(
-                main,
-                (url, index),
-            )
-        pool.close()
-        pool.join()
+        logging.info("CPU count: %s", cpu_count())
+        with Pool(workers) as pool:
+            for index, url in enumerate(urls):
+                pool.apply_async(
+                    main,
+                    (url, index),
+                )
+            pool.close()
+            pool.join()
     else:
         classifier = BirdClassifier(
             model_url=DEFAULT_MODEL_URL, labels_url=DEFAULT_LABELS_URL
@@ -151,7 +177,7 @@ def app(
                 logging.error("No results")
                 return
             classifier.show_results(result, index)
-    logging.info("Time spent: %s" % (time.time() - start_time))
+    logging.info("Time spent: %s", (time.time() - start_time))
 
 
 if __name__ == "__main__":
