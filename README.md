@@ -23,7 +23,6 @@ Feel free to play around with the code as much as you like, but in the end we wa
 * Top 3 results from the model's output per image
 * Proper logging for essential and debug info if necessary
 * Analyse the bottlenecks in your implementation, and report options for improving upon them
-* Finished work has to be pushed to github and shared with @rivol, @veriff-yauheni-aliakseyeu, and @khadrawy
 
 Bonus
 * Add CLI and/or web API
@@ -53,4 +52,28 @@ The model has been verified to run with TensorFlow 2.
 
 \** Production: The code was deployed as a python service using Docker with Kubernetes for the infrastructure layer.
 
-In case of questions feel free to contact Rivo Laks at rivo.laks@veriff.net
+# Solution
+There is a CLI application that can be run with `python classifier.py`
+The application can be passed a list of URLS to images to classify. If no URLs are passed, the application will use a default list of URLs.
+The application uses multiprocessing to download the images and classify them in parallel.
+It accepts the following arguments:
+
+Options:
+  --spawn / --no-spawn            Spawn a new process for each image.
+                                  [default: no-spawn]
+  --workers INTEGER               Number of workers.  [default: half the available cores]
+  --install-completion [bash|zsh|fish|powershell|pwsh]
+                                  Install completion for the specified shell.
+  --show-completion [bash|zsh|fish|powershell|pwsh]
+                                  Show completion for the specified shell, to
+                                  copy it or customize the installation.
+  --help                          Show the help message and exit.
+
+There is also a webapp. It can be run with `docker-compose build` , `docker-compose push` and `docker-compose up` . It will be available at http://localhost:8000.
+The url explorer can be found at http://127.0.0.1:8000/docs.
+
+The webapp uses RQ workers to process the images. The number of workers can be configured in the docker-compose.yml file. Each image is classified in a separate worker. The workers are run in a separate docker container. The webapp is run in a separate docker container. The webapp and the workers communicate via Redis. All the images are tagged to a batch_id which can be used to get the results for the batch.
+
+
+# Tests
+The webapp tests can be run with `python -m pytest . --ignore=data` .

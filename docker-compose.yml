@@ -1,4 +1,4 @@
-version: "3"
+version: "3.4"
 services:
   fastapi:
     build:
@@ -10,7 +10,7 @@ services:
       - type: bind
         source: ./
         target: /src
-    command: "gunicorn -b localhost:${PORT} webapp:app -w ${WORKERS} -k uvicorn.workers.UvicornWorker --preload --log-level {LOGLEVEL}"
+    command: "gunicorn -b localhost:${PORT} webapp.webapp:app -w ${WORKERS} -k uvicorn.workers.UvicornWorker --preload --log-level {LOGLEVEL}"
   db:
     image: postgres
     volumes:
@@ -38,7 +38,7 @@ services:
     network_mode: host
     volumes:
       - type: bind
-        source: ./
+        source: ./webapp
         target: /src
     deploy:
       mode: replicated

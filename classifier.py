@@ -5,6 +5,7 @@ import urllib.request
 from itertools import islice
 from multiprocessing import Pool, cpu_count
 from typing import Dict, List, Optional, Tuple
+from urllib.parse import urlparse
 
 import cv2
 import numpy as np
@@ -14,6 +15,7 @@ import typer
 
 from constants import DEFAULT_IMAGE_URLS, DEFAULT_LABELS_URL, DEFAULT_MODEL_URL
 
+app = typer.Typer()
 logging.basicConfig(level=logging.INFO)
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"  # Disable Tensorflow logging
 
@@ -27,9 +29,23 @@ class BirdClassifier:
         logging.info("Loading model")
         self.model = hub.KerasLayer(model_url)
 
+    def load_model(self, model_url: str = DEFAULT_MODEL_URL):
+        o = urlparse(model_url)
+        if o.scheme == "":
+            logging.info("Loading model from local file")
+        model = hub.KerasLayer(model_url)
+        return model
+
+    def load_csv(self, url):
+        o = urlparse(url)
+        if o.scheme == "":
+            return open(url, "rb")
+        else:
+            return urllib.request.urlopen(url)
+
     def load_and_cleanup_labels(self, labels_url: str) -> Dict[int, Dict[str, str]]:
-        bird_labels_raw = urllib.request.urlopen(labels_url)
         birds = {}
+        bird_labels_raw = self.load_csv(labels_url)
         for line in islice(bird_labels_raw.readlines(), 1, None):
             bird_label_line = line.decode("utf-8").replace("\n", "")
             bird_id = int(bird_label_line.split(",")[0])
@@ -127,7 +143,8 @@ def main(url: str, index: int):
     classifier.show_results(result, index)
 
 
-def app(
+@app.command()
+def app_classifier(
     urls: Optional[List[str]] = typer.Argument(None, help="Urls of bird images."),
     spawn: bool = typer.Option(False, help="Spawn a new process for each image."),
     workers: int = typer.Option(int(cpu_count() / 2), help="Number of workers."),
@@ -181,4 +198,4 @@ def app(
 
 
 if __name__ == "__main__":
-    typer.run(app)
+    app()
