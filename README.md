@@ -1,4 +1,4 @@
-# Test Task
+# Bird Classifier
 
 Many photographers have been taking images of birds and wondering what kind of bird it actually is.
 
